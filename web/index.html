@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniSight // Enterprise Disruption Radar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #0d131f; 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; /* Prevent full body scroll, let main scroll */
+        }
+        h1, h2, h3, .brand-text { font-family: 'Outfit', sans-serif; }
+        
+        /* Glassmorphism utility */
+        .glass-card { 
+            background: rgba(22, 30, 49, 0.65); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Neon Accents & Glows */
+        .glow-cyan { text-shadow: 0 0 10px rgba(6, 182, 212, 0.5); }
+        .glow-emerald { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .glow-red { text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        /* Loader Animation */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(6, 182, 212, 0.8);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
+            animation: scan 2s linear infinite;
+            display: none;
+            z-index: 50;
+        }
+
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        
+        /* Interactive transitions */
+        .interactive-row:hover {
+            background: rgba(15, 23, 42, 0.8);
+            transform: translateX(4px);
+            transition: all 0.2s ease;
+        }
+        
+        .status-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="text-slate-200 h-screen flex relative">
+
+    <div class="scan-line" id="scan-line"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-72 bg-[#090d16] border-r border-slate-800/80 flex flex-col p-6 space-y-8 relative z-10 shadow-2xl">
+        <div class="flex items-center space-x-3 mt-2">
+            <div class="h-10 w-10 bg-cyan-500 rounded-xl flex items-center justify-center font-bold text-black text-xl shadow-[0_0_20px_rgba(6,182,212,0.4)]">Ω</div>
+            <span class="text-2xl font-bold tracking-widest text-white brand-text">OmniSight</span>
+        </div>
+        <nav class="flex-1 space-y-2 mt-8">
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-cyan-950/40 to-transparent text-cyan-400 rounded-xl border-l-2 border-cyan-500 font-medium transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Live Radar</span>
+            </a>
+            
+            <div class="pt-6 pb-2">
+                <div class="text-xs text-slate-500 uppercase tracking-wider font-semibold px-4 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Target Vault
+                </div>
+                <div id="target-vault-list" class="space-y-1 overflow-y-auto max-h-48 pr-2">
+                    <div class="text-xs text-slate-600 italic px-4">No targets cached yet.</div>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="glass-card rounded-xl p-4 mt-auto">
+            <div class="text-xs text-slate-400 font-medium mb-2 uppercase tracking-wider">Engine Status</div>
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 status-badge"></div>
+                <span class="text-sm text-emerald-400 font-medium" id="agent-status-text">Idle - Ready</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace Frame -->
+    <main class="flex-1 p-8 overflow-y-auto space-y-8 relative">
+        
+        <!-- Action Header -->
+        <header class="flex justify-between items-end border-b border-slate-800/60 pb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-tight brand-text">Competitor Battlecard</h1>
+                <p class="text-sm text-slate-400 mt-2 font-light">Autonomous deep-web tracking powered by Bright Data pipelines</p>
+            </div>
+            <div class="flex space-x-3 items-center">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="target-input" placeholder="Enter target domain or company..." class="bg-[#0f172a] border border-slate-700/50 pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-64 transition text-white placeholder-slate-500 shadow-inner">
+                </div>
+                
+                <!-- Audio Intel Modal Dropdown -->
+                <div class="relative" id="audio-menu-container">
+                    <button id="audio-btn" class="bg-slate-800 border border-slate-700 hover:border-violet-500 text-slate-300 px-4 py-2.5 rounded-xl font-medium text-sm transition flex items-center gap-2" onclick="toggleAudioMenu()">
+                        <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                        <span id="audio-btn-text">Audio Intel</span>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div id="audio-menu" class="absolute top-full mt-3 right-0 w-72 bg-[#0f172a] border border-slate-700 rounded-xl shadow-2xl p-4 hidden z-50 transition-all origin-top-right">
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Speechmatics Source</div>
+                        
+                        <!-- Option 1: File Upload -->
+                        <div class="mb-4">
+                            <label class="block text-xs text-slate-500 mb-1">Offline File</label>
+                            <input type="file" id="audio-upload" accept="audio/*" class="hidden" onchange="handleAudioSelect()">
+                            <button class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-2 rounded-lg text-sm transition flex items-center justify-center gap-2" onclick="document.getElementById('audio-upload').click()">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                Upload Audio File
+                            </button>
+                        </div>
+
+                        <!-- Option 2: URL Link -->
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">Public URL Link</label>
+                            <input type="text" id="audio-url-input" placeholder="https://youtube.com/..." class="w-full bg-[#090d16] border border-slate-700 px-3 py-2 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500" onchange="handleAudioUrlInput()">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="deploy-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-6 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] transition transform hover:-translate-y-0.5" onclick="deployRadar()">Deploy Radar</button>
+                
+                <!-- Benchmark Input -->
+                <div class="relative ml-2 border-l border-slate-700 pl-3 hidden lg:block">
+                    <input type="text" id="benchmark-input" placeholder="Compare vs..." class="bg-[#0f172a] border border-slate-700/50 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-32 transition text-white placeholder-slate-500 shadow-inner">
+                </div>
+                <button id="benchmark-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-[0_0_15px_rgba(79,70,229,0.3)] transition hidden lg:block" onclick="deployBenchmark()">Benchmark</button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="flex space-x-1 border-b border-slate-800/60 pb-px">
+            <button class="px-6 py-3 text-sm font-medium border-b-2 border-cyan-500 text-cyan-400 transition" onclick="switchTab('dashboard')" id="tab-dashboard">Executive Dashboard</button>
+            <button class="px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition" onclick="switchTab('analysis')" id="tab-analysis">Deep Analysis</button>
+            <button class="px-6 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition" onclick="switchTab('speechmatics')" id="tab-speechmatics">Speechmatics Intel</button>
+        </div>
+
+        <!-- Dynamic Grid Matrix Layout (Tab 1) -->
+        <div id="view-dashboard" class="block">
+            <section class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Target Summary Profile Panel -->
+            <div class="glass-card rounded-2xl p-6 space-y-5 flex flex-col relative overflow-hidden group">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition duration-700"></div>
+                <div class="flex items-center space-x-4 relative z-10">
+                    <div class="h-14 w-14 bg-gradient-to-tr from-cyan-600 to-blue-700 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-lg border border-white/10" id="target-initials">--</div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white brand-text" id="target-name">Awaiting Target...</h3>
+                        <span class="text-xs bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700/50 mt-1 inline-block">Direct Competitor</span>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-300 leading-relaxed font-light" id="target-summary">
+                    Enter a target company to initiate the intelligence gathering protocol. The agent will traverse the web and extract structured strategy signals.
+                </p>
+                <div class="grid grid-cols-3 gap-3 text-center border-t border-slate-700/50 pt-5 mt-auto relative z-10">
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Index Score</div>
+                        <div class="text-base font-bold text-emerald-400 glow-emerald" id="index-score">-</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Hiring Vector</div>
+                        <div class="text-base font-bold text-amber-400" id="hiring-vector">-</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Live Status</div>
+                        <div class="text-base font-bold text-cyan-400 glow-cyan" id="live-status">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Trend Vectors Panel (Radar Chart) -->
+            <div class="glass-card rounded-2xl p-6 space-y-5 lg:col-span-1 flex flex-col relative h-full">
+                <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                    Radar Metrics
+                </h3>
+                <div class="flex-1 relative min-h-[180px] flex items-center justify-center">
+                    <canvas id="radarChart"></canvas>
+                    <div id="radar-placeholder" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500 italic">Awaiting telemetry...</div>
+                </div>
+            </div>
+
+            <!-- Strategic Indicators Tracking Panel -->
+            <div class="glass-card rounded-2xl p-6 space-y-5 lg:col-span-1 flex flex-col">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Extracted GTM Anomalies
+                    </h3>
+                </div>
+                <div class="space-y-3 overflow-y-auto pr-2 flex-1" id="anomalies-list">
+                    <div class="text-sm text-slate-500 italic text-center mt-10">No anomalies detected yet.</div>
+                </div>
+            </div>
+
+            <!-- Features Comparative Delta Matrix -->
+            <div class="glass-card rounded-2xl p-6 space-y-5 lg:col-span-1">
+                <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Feature Parity Baseline
+                </h3>
+                <div class="overflow-hidden rounded-xl border border-slate-700/50">
+                    <table class="w-full text-left text-sm bg-slate-900/30">
+                        <thead class="bg-slate-900/80">
+                            <tr class="border-b border-slate-700/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="py-3 px-4 font-medium">Capability</th>
+                                <th class="py-3 px-4 text-center font-medium">Us</th>
+                                <th class="py-3 px-4 text-center font-medium">Them</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40 text-slate-300" id="parity-list">
+                            <tr><td colspan="3" class="py-4 text-center text-slate-500 italic">No data available.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Technical Signals Feed (Spans Full Width Below) -->
+            <div class="glass-card rounded-2xl p-6 lg:col-span-4">
+                <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 mb-4 flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Raw Intelligence Feed
+                </h3>
+                <div class="bg-[#090d16] border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-500/80 h-48 overflow-y-auto leading-relaxed" id="terminal-feed">
+                    > OmniSight Execution Terminal initialized.
+                    > System standing by for target parameters...
+                </div>
+            </div>
+
+            </section>
+        </div>
+
+        <!-- Deep Analysis View (Tab 2) -->
+        <div id="view-analysis" class="hidden space-y-6">
+            <div class="glass-card rounded-2xl p-8">
+                <h2 class="text-2xl font-bold text-white brand-text mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Strategic AI Analysis
+                </h2>
+                <div id="detailed-analysis-content" class="text-slate-300 leading-relaxed space-y-4 text-sm whitespace-pre-wrap">
+                    <p class="text-slate-500 italic">Run a target scan to generate the comprehensive deep-dive analysis.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speechmatics View (Tab 3) -->
+        <div id="view-speechmatics" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Key Phrases -->
+                <div class="glass-card rounded-2xl p-6 lg:col-span-1">
+                    <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Extracted Business Drivers
+                    </h3>
+                    <div id="audio-keywords" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-slate-500 italic">No audio intelligence provided.</span>
+                    </div>
+                </div>
+                <!-- Diarization -->
+                <div class="glass-card rounded-2xl p-6 lg:col-span-2 flex flex-col h-[600px]">
+                    <h3 class="font-semibold text-white tracking-wide text-xs uppercase text-slate-400 mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                        Diarized Spoken Intel
+                    </h3>
+                    <div id="audio-transcript" class="flex-1 overflow-y-auto space-y-4 pr-2">
+                        <div class="text-sm text-slate-500 italic text-center mt-20">Attach an audio file or URL to generate Speechmatics transcripts.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let pollInterval = null;
+        let selectedAudioFile = null;
+        let selectedAudioBase64 = null;
+        let selectedAudioUrl = null;
+
+        function toggleAudioMenu() {
+            const menu = document.getElementById('audio-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('audio-menu-container');
+            if (!container.contains(event.target)) {
+                document.getElementById('audio-menu').classList.add('hidden');
+            }
+        });
+
+        function handleAudioSelect() {
+            const input = document.getElementById('audio-upload');
+            if(input.files && input.files[0]) {
+                selectedAudioFile = input.files[0];
+                selectedAudioUrl = null;
+                document.getElementById('audio-url-input').value = "";
+                
+                document.getElementById('audio-btn-text').innerText = selectedAudioFile.name.substring(0, 15) + "...";
+                document.getElementById('audio-btn').classList.replace('text-slate-300', 'text-violet-400');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedAudioBase64 = e.target.result;
+                };
+                reader.readAsDataURL(selectedAudioFile);
+                document.getElementById('audio-menu').classList.add('hidden');
+            }
+        }
+
+        function handleAudioUrlInput() {
+            const input = document.getElementById('audio-url-input');
+            if(input.value.trim() !== "") {
+                selectedAudioUrl = input.value.trim();
+                selectedAudioFile = null;
+                selectedAudioBase64 = null;
+                document.getElementById('audio-upload').value = "";
+                
+                document.getElementById('audio-btn-text').innerText = "Link Attached";
+                document.getElementById('audio-btn').classList.replace('text-slate-300', 'text-violet-400');
+                document.getElementById('audio-menu').classList.add('hidden');
+            } else {
+                selectedAudioUrl = null;
+                document.getElementById('audio-btn-text').innerText = "Audio Intel";
+                document.getElementById('audio-btn').classList.replace('text-violet-400', 'text-slate-300');
+            }
+        }
+
+        function addTerminalLine(text) {
+            const term = document.getElementById('terminal-feed');
+            term.innerHTML += `<br>> ${text}`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function deployRadar() {
+            const target = document.getElementById('target-input').value;
+            if(!target) return alert('Please enter a target domain.');
+            
+            const btn = document.getElementById('deploy-btn');
+            const scanLine = document.getElementById('scan-line');
+            const statusText = document.getElementById('agent-status-text');
+            
+            btn.innerText = "Executing...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            scanLine.style.display = "block";
+            statusText.innerText = "Executing Scan...";
+            statusText.classList.replace('text-emerald-400', 'text-amber-400');
+            
+            // Immediately clear out old DOM data values for a fresh visual loading state.
+            // Note: Map the requested IDs (#comp-name, #comp-status, #comp-summary) to actual page IDs (#target-name, #live-status, #target-summary)
+            document.getElementById('target-name').innerText = "Scanning...";
+            document.getElementById('target-initials').innerText = "--";
+            document.getElementById('live-status').innerText = "Analyzing...";
+            document.getElementById('target-summary').innerText = "OmniSight agents are mapping the target infrastructure... please hold.";
+            document.getElementById('index-score').innerText = "-";
+            document.getElementById('hiring-vector').innerText = "-";
+            document.getElementById('anomalies-list').innerHTML = '<div class="text-sm text-slate-500 italic text-center mt-10">Scanning for GTM anomalies...</div>';
+            document.getElementById('parity-list').innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-500 italic">Syncing feature delta...</td></tr>';
+            
+            lastStatusLineCount = 0;
+            document.getElementById('terminal-feed').innerHTML = ''; // Clear terminal for fresh run
+            addTerminalLine(`Initiating deployment against [${target}]...`);
+            addTerminalLine(`Booting Bright Data proxy connections...`);
+            if(selectedAudioFile) {
+                addTerminalLine(`[+] Audio Intel attached: ${selectedAudioFile.name}`);
+                addTerminalLine(`[+] Standby for Speechmatics batch transcription...`);
+            } else if (selectedAudioUrl) {
+                addTerminalLine(`[+] Audio URL attached: ${selectedAudioUrl}`);
+                addTerminalLine(`[+] Standby for Speechmatics batch transcription...`);
+            }
+
+            try {
+                const payload = { target };
+                if (selectedAudioBase64) {
+                    payload.audio = selectedAudioBase64;
+                    payload.filename = selectedAudioFile.name;
+                }
+                if (selectedAudioUrl) {
+                    payload.audio_url = selectedAudioUrl;
+                }
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if(response.ok) {
+                    addTerminalLine(`Agent successfully deployed in background.`);
+                    // Start polling for data
+                    if(pollInterval) clearInterval(pollInterval);
+                    pollInterval = setInterval(fetchData, 3000);
+                } else {
+                    addTerminalLine(`Error deploying agent.`);
+                    resetUI();
+                }
+            } catch (err) {
+                addTerminalLine(`Network error: ${err}`);
+                resetUI();
+            }
+        }
+
+        function resetUI() {
+            const btn = document.getElementById('deploy-btn');
+            const scanLine = document.getElementById('scan-line');
+            const statusText = document.getElementById('agent-status-text');
+            
+            btn.innerText = "Deploy Radar";
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            scanLine.style.display = "none";
+            statusText.innerText = "Idle - Ready";
+            statusText.classList.replace('text-amber-400', 'text-emerald-400');
+            
+            selectedAudioFile = null;
+            selectedAudioBase64 = null;
+            document.getElementById('audio-upload').value = "";
+            document.getElementById('audio-btn-text').innerText = "Audio Intel";
+            document.getElementById('audio-btn').classList.replace('text-violet-400', 'text-slate-300');
+            
+            if(pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        let lastStatusLineCount = 0;
+
+        async function fetchData() {
+            try {
+                // Fetch live status terminal feed
+                try {
+                    const statusRes = await fetch('/data/status.txt?v=' + new Date().getTime());
+                    if(statusRes.ok) {
+                        const statusText = await statusRes.text();
+                        const lines = statusText.split('\\n');
+                        for(let i = lastStatusLineCount; i < lines.length; i++) {
+                            if(lines[i].trim() !== "") {
+                                addTerminalLine(lines[i].trim());
+                            }
+                        }
+                        lastStatusLineCount = lines.length;
+                    }
+                } catch(e) {} // ignore status fetch errors
+
+                // Fetch final battlecard payload
+                // Bust the browser cache by appending the unique timestamp query parameter as ?v=
+                const res = await fetch('/data/latest_battlecard.json?v=' + new Date().getTime());
+                if(res.ok) {
+                    const data = await res.json();
+                    updateDashboard(data);
+                    addTerminalLine(`Received structured Phase 3 payload.`);
+                    addTerminalLine(`Analysis Complete.`);
+                    resetUI();
+                }
+            } catch (err) {
+                // File not ready yet, continue polling
+            }
+        }
+
+        let currentTargetData = null;
+
+        function updateDashboard(data) {
+            currentTargetData = data;
+            document.getElementById('target-name').innerText = data.target_company;
+            document.getElementById('target-input').value = data.target_company;
+            document.getElementById('target-initials').innerText = data.target_company.substring(0, 2).toUpperCase();
+            document.getElementById('target-summary').innerText = data.summary;
+            document.getElementById('index-score').innerText = data.index_score;
+            document.getElementById('hiring-vector').innerText = data.hiring_vector;
+            document.getElementById('live-status').innerText = data.live_status;
+
+            // Anomalies
+            const anomList = document.getElementById('anomalies-list');
+            anomList.innerHTML = '';
+            data.anomalies.forEach(anom => {
+                const colorMap = {
+                    'emerald': 'bg-emerald-500',
+                    'amber': 'bg-amber-500',
+                    'red': 'bg-red-500'
+                };
+                const bgClass = colorMap[anom.severity] || 'bg-cyan-500';
+                
+                anomList.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-900/50 border border-slate-700/50 p-3.5 rounded-xl interactive-row cursor-pointer">
+                        <div class="flex items-center space-x-3">
+                            <span class="h-2.5 w-2.5 rounded-full ${bgClass} shadow-[0_0_8px_currentColor]"></span>
+                            <span class="text-sm text-slate-200 font-medium">${anom.title}</span>
+                        </div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">${anom.type}</span>
+                    </div>
+                `;
+            });
+
+            // Parity
+            const parityList = document.getElementById('parity-list');
+            parityList.innerHTML = '';
+            data.feature_parity.forEach(item => {
+                const usIcon = item.us_status ? '<span class="text-emerald-400 glow-emerald">✓</span>' : '<span class="text-slate-600">✕</span>';
+                const themIcon = item.them_status ? '<span class="text-emerald-400 glow-emerald">✓</span>' : '<span class="text-slate-600">✕</span>';
+                
+                parityList.innerHTML += `
+                    <tr class="interactive-row cursor-pointer">
+                        <td class="py-3 px-4 font-medium text-slate-300">${item.capability}</td>
+                        <td class="py-3 px-4 text-center text-lg">${usIcon}</td>
+                        <td class="py-3 px-4 text-center text-lg">${themIcon}</td>
+                    </tr>
+                `;
+            });
+
+            // Detailed Analysis
+            if(data.detailed_analysis) {
+                let html = data.detailed_analysis
+                    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold text-white mt-4 mb-2">$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-white mt-5 mb-3">$1</h2>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+                    .replace(/\n\n/g, '</p><p class="mt-2">');
+                document.getElementById('detailed-analysis-content').innerHTML = '<p>' + html + '</p>';
+            } else {
+                document.getElementById('detailed-analysis-content').innerHTML = '<p class="text-slate-500 italic">No detailed analysis data available in vault for this target. Run a new scan to generate.</p>';
+            }
+
+            // Audio Analysis
+            if(data.audio_analysis && data.audio_analysis.has_audio) {
+                const kwContainer = document.getElementById('audio-keywords');
+                kwContainer.innerHTML = '';
+                data.audio_analysis.key_phrases.forEach(kw => {
+                    kwContainer.innerHTML += `<span class="bg-violet-900/40 text-violet-300 border border-violet-700/50 px-3 py-1 rounded-full text-xs font-medium shadow-[0_0_10px_rgba(139,92,246,0.2)]">${kw}</span>`;
+                });
+
+                const trContainer = document.getElementById('audio-transcript');
+                trContainer.innerHTML = '';
+                data.audio_analysis.diarized_transcript.forEach((turn, idx) => {
+                    const isEven = idx % 2 === 0;
+                    trContainer.innerHTML += `
+                        <div class="flex flex-col ${isEven ? 'items-start' : 'items-end'} mb-4 w-full">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">${turn.speaker}</span>
+                            <div class="max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg ${isEven ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700' : 'bg-[#1e1b4b]/60 border border-violet-800/50 text-violet-100 rounded-tr-none'}">
+                                ${turn.text}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                document.getElementById('audio-keywords').innerHTML = '<span class="text-sm text-slate-500 italic">No audio intelligence provided.</span>';
+                document.getElementById('audio-transcript').innerHTML = '<div class="text-sm text-slate-500 italic text-center mt-20">Attach an audio file or URL to generate Speechmatics transcripts.</div>';
+            }
+
+            // Target Vault Data Lake Caching
+            localStorage.setItem('omnisight_' + data.target_company, JSON.stringify(data));
+            loadVault();
+
+            // Render Chart.js Radar
+            renderRadarChart(data.radar_metrics);
+        }
+
+        let radarChart = null;
+        function renderRadarChart(metrics, metricsBench = null, labelPrimary = 'Target', labelBench = 'Benchmark') {
+            document.getElementById('radar-placeholder').style.display = 'none';
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (radarChart) radarChart.destroy();
+            
+            let labels = metrics ? Object.keys(metrics) : ['Pricing', 'Performance', 'Features', 'Mobile', 'Support'];
+            let scoresPrimary = metrics ? Object.values(metrics) : [0, 0, 0, 0, 0];
+            
+            let datasets = [{
+                label: labelPrimary,
+                data: scoresPrimary,
+                backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                borderColor: 'rgba(6, 182, 212, 1)',
+                pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(16, 185, 129, 1)'
+            }];
+
+            if(metricsBench) {
+                let scoresBench = labels.map(l => metricsBench[l] || 0);
+                datasets.push({
+                    label: labelBench,
+                    data: scoresBench,
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(139, 92, 246, 1)'
+                });
+            }
+
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            pointLabels: { color: '#94a3b8', font: { family: 'Inter', size: 10 } },
+                            ticks: { display: false, min: 0, max: 100 }
+                        }
+                    },
+                    plugins: { legend: { display: !!metricsBench, labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-analysis').classList.add('hidden');
+            document.getElementById('view-speechmatics').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.remove('block');
+
+            const tabs = ['dashboard', 'analysis', 'speechmatics'];
+            tabs.forEach(t => {
+                const el = document.getElementById('tab-' + t);
+                el.classList.remove('border-cyan-500', 'text-cyan-400');
+                el.classList.add('border-transparent', 'text-slate-500');
+            });
+
+            document.getElementById('view-' + tabId).classList.remove('hidden');
+            if(tabId === 'dashboard') document.getElementById('view-' + tabId).classList.add('block');
+
+            const activeTab = document.getElementById('tab-' + tabId);
+            activeTab.classList.remove('border-transparent', 'text-slate-500');
+            activeTab.classList.add('border-cyan-500', 'text-cyan-400');
+        }
+
+        function renderDualParity(parity1, parity2, name1 = 'Us', name2 = 'Them') {
+            const tableEl = document.getElementById('parity-list').closest('table');
+            const header = tableEl.querySelector('thead tr');
+            header.innerHTML = `
+                <th class="py-3 px-4 font-medium">Capability</th>
+                <th class="py-3 px-4 text-center font-medium">${name1}</th>
+                <th class="py-3 px-4 text-center font-medium">${name2}</th>
+            `;
+
+            const parityList = document.getElementById('parity-list');
+            parityList.innerHTML = '';
+            
+            const map2 = {};
+            if (parity2) {
+                parity2.forEach(item => {
+                    map2[item.capability.toLowerCase()] = item.us_status;
+                });
+            }
+
+            parity1.forEach(item => {
+                const status1 = item.us_status;
+                const status2 = map2[item.capability.toLowerCase()] !== undefined ? map2[item.capability.toLowerCase()] : item.them_status;
+                
+                const icon1 = status1 ? '<span class="text-emerald-400 glow-emerald">✓</span>' : '<span class="text-slate-600">✕</span>';
+                const icon2 = status2 ? '<span class="text-emerald-400 glow-emerald">✓</span>' : '<span class="text-slate-600">✕</span>';
+                
+                parityList.innerHTML += `
+                    <tr class="interactive-row cursor-pointer">
+                        <td class="py-3 px-4 font-medium text-slate-300">${item.capability}</td>
+                        <td class="py-3 px-4 text-center text-lg">${icon1}</td>
+                        <td class="py-3 px-4 text-center text-lg">${icon2}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function deployBenchmark() {
+            let inputVal = document.getElementById('benchmark-input').value.trim();
+            if(!inputVal) return;
+
+            let comp1 = "";
+            let comp2 = "";
+            if (inputVal.toLowerCase().includes(" vs ")) {
+                const parts = inputVal.split(/ vs /i);
+                comp1 = parts[0].trim();
+                comp2 = parts[1].trim();
+            } else if (inputVal.toLowerCase().includes(" vs")) {
+                const parts = inputVal.split(/ vs/i);
+                comp1 = parts[0].trim();
+                comp2 = parts[1].trim();
+            } else {
+                comp2 = inputVal;
+                if (currentTargetData) {
+                    comp1 = currentTargetData.target_company;
+                }
+            }
+
+            if (!comp1) {
+                for(let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if(key.startsWith('omnisight_')) {
+                        comp1 = JSON.parse(localStorage.getItem(key)).target_company;
+                        break;
+                    }
+                }
+            }
+
+            if (!comp1 || !comp2) {
+                addTerminalLine(`[ERROR] Select a primary target first or enter e.g. "Nvidia vs Google"`);
+                return;
+            }
+
+            let data1 = null;
+            let data2 = null;
+
+            for(let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if(key.startsWith('omnisight_')) {
+                    const companyName = key.replace('omnisight_', '').toLowerCase();
+                    if (companyName.includes(comp1.toLowerCase()) || comp1.toLowerCase().includes(companyName)) {
+                        data1 = JSON.parse(localStorage.getItem(key));
+                    }
+                    if (companyName.includes(comp2.toLowerCase()) || comp2.toLowerCase().includes(companyName)) {
+                        data2 = JSON.parse(localStorage.getItem(key));
+                    }
+                }
+            }
+
+            if (data1 && data2) {
+                updateDashboard(data1);
+                renderRadarChart(data1.radar_metrics, data2.radar_metrics, data1.target_company, data2.target_company);
+                renderDualParity(data1.feature_parity, data2.feature_parity, data1.target_company, data2.target_company);
+                switchTab('dashboard');
+                addTerminalLine(`Benchmark engaged: ${data1.target_company} vs ${data2.target_company}`);
+            } else {
+                if (!data1) addTerminalLine(`[ERROR] Primary target '${comp1}' not found in vault.`);
+                if (!data2) addTerminalLine(`[ERROR] Comparison target '${comp2}' not found in vault.`);
+            }
+        }
+
+        function loadVault() {
+            const vaultList = document.getElementById('target-vault-list');
+            let hasTargets = false;
+            let html = '';
+            for(let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if(key.startsWith('omnisight_')) {
+                    hasTargets = true;
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        html += `
+                            <a href="#" onclick="loadFromVault('${key}')" class="flex items-center space-x-3 px-4 py-2 text-slate-400 hover:bg-slate-900/50 rounded-xl transition hover:text-cyan-400 interactive-row border border-transparent hover:border-slate-800">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_currentColor]"></span>
+                                <span class="text-sm truncate font-medium">${data.target_company}</span>
+                            </a>
+                        `;
+                    } catch(e) {}
+                }
+            }
+            if(hasTargets) vaultList.innerHTML = html;
+        }
+
+        function loadFromVault(key) {
+            const data = JSON.parse(localStorage.getItem(key));
+            updateDashboard(data);
+            addTerminalLine(`[Data Lake] Successfully re-hydrated '${data.target_company}' from local storage.`);
+        }
+
+        // Initialize vault on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVault();
+            // Automatically load latest battlecard if available
+            fetch('/data/latest_battlecard.json?v=' + new Date().getTime())
+                .then(res => {
+                    if (res.ok) return res.json();
+                })
+                .then(data => {
+                    if (data) updateDashboard(data);
+                })
+                .catch(err => {});
+        });
+
+        // Auto-select text in the search input when focused for faster new searches
+        document.getElementById('target-input').addEventListener('focus', function() {
+            this.select();
+        });
+    </script>
+</body>
+</html>
