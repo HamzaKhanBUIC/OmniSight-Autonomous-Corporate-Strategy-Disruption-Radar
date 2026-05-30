@@ -7,7 +7,7 @@ import time
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 WEB_DIR = "web"
 
 # Ensure web directory exists
