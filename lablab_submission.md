@@ -24,7 +24,7 @@ We architected OmniSight for speed, scale, and deep intelligence, heavily levera
 ### 🛑 Challenges we ran into
 Handling massive, unstructured, and disparate data streams simultaneously is hard. Initially, our sequential data pipeline caused scans to take over 5 minutes, resulting in frequent timeouts and a poor user experience. We had to completely refactor our Python backend to use `asyncio` and parallel processing. By deploying concurrent agents for SERP scraping, Deep-URL parsing, and audio processing, we slashed our processing time significantly. We also built a live terminal UI in the backend to monitor these parallel data streams and ensure no silent failures during execution.
 
-*Note on Live Demo Performance: Our Live Demo is hosted on Render's Free Tier (0.1 CPU limit), which severely throttles our asynchronous pipelines, causing scans to take several minutes. For optimal, lightning-fast execution, we highly recommend running the application locally as per the README instructions.*
+*Note on Live Demo Performance: Our Live Demo is hosted on Render's Free Tier (0.1 CPU, 512MB RAM limit). This severely throttles our asynchronous pipelines, causing basic scans to take several minutes. Furthermore, executing the Speechmatics Audio Pipeline on the live demo will cause a server crash (Out of Memory - OOM) because audio stream processing paired with local vector embeddings requires ~1GB of RAM. For optimal, lightning-fast execution and full audio capabilities, we highly recommend running the application locally as per the README instructions.*
 
 ### 🔮 What's next for OmniSight
 OmniSight is ready to move from a hackathon prototype to a $10M B2B SaaS startup. Next, we plan to:

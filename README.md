@@ -6,7 +6,7 @@
 OmniSight is an enterprise-grade corporate intelligence dashboard built for executives, venture capitalists, and strategy teams. Stop manually Googling your competitors or listening to hours of earnings calls. Simply enter a competitor's name, attach an audio file, and let OmniSight deploy autonomous AI agents to build a real-time, deep-dive intelligence battlecard. 
 
 > [!NOTE] 
-> **Performance Notice for Judges:** The live cloud demo is hosted on Render's Free Tier (0.1 CPU, 512MB RAM), which heavily bottlenecks our asynchronous agent pipeline, leading to scans taking up to seconds to several minutes. For lightning-fast execution speeds (under 30 seconds), please clone the repository and run the application locally!
+> **Performance & Audio Notice for Judges:** The live cloud demo is hosted on Render's Free Tier (0.1 CPU, 512MB RAM limit). This severely bottlenecks our asynchronous agent pipeline, leading to basic scans taking several minutes. **Furthermore, executing the Speechmatics Audio Pipeline on the live demo will cause a server crash (Out of Memory - OOM)** because processing audio streams and loading local vector embeddings requires ~1GB of RAM, exceeding Render's 512MB limit. **For optimal, lightning-fast execution and full audio intelligence capabilities, please clone the repository and run the application locally!**
 
 ## ✨ Features
 
