@@ -65,7 +65,7 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
 
                 def run_agent():
                     print(f"[*] Server starting radar scan for: {target}")
-                    cmd = ["py", "agent_runtime.py", target]
+                    cmd = ["python", "agent_runtime.py", target]
                     if temp_audio_path:
                         cmd.extend(["--audio", temp_audio_path])
                     if audio_url:
