@@ -25,13 +25,13 @@ OmniSight represents the cutting edge of AI agent orchestration, built utilizing
 ### Sponsor Technologies
 * **🌐 Bright Data (SERP API & Web Unlocker)**: Executes live, parallel searches to capture market shifts while utilizing the Web Unlocker to deep-scrape URLs and bypass CAPTCHAs.
 * **🗣️ Speechmatics (Batch Async API)**: Powers our audio ingestion pipeline, providing industry-leading speaker diarization and transcription from raw files or direct URLs.
-* **🕸️ Cognee**: Constructs our Agent Graph Memory, ensuring the platform retains historical context and relationships between competitors across multiple scans.
+* **🕸️ Cognee**: Constructs our Agent Graph Memory, ensuring the platform retains historical context and relationships between competitors across multiple scans. *Note: Cognee runs entirely locally via SQLite/Vector index and uses your existing Gemini/Groq LLM key, requiring no separate proprietary SaaS API key to set up.*
 
 ## 🚀 How to Run Locally
 
 ### Prerequisites
 - Python 3.9+
-- API Keys for Bright Data, Speechmatics, Cognee, and Google Gemini / Groq.
+- API Keys for Bright Data, Speechmatics, and Google Gemini / Groq.
 
 ### Installation Steps
 
@@ -51,7 +51,6 @@ OmniSight represents the cutting edge of AI agent orchestration, built utilizing
    ```env
    BRIGHT_DATA_API_KEY=your_key_here
    SPEECHMATICS_API_KEY=your_key_here
-   COGNEE_API_KEY=your_key_here
    GEMINI_API_KEY=your_key_here
    GROQ_API_KEY=your_key_here
    ```
