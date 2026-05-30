@@ -56,9 +56,27 @@ OmniSight represents the cutting edge of AI agent orchestration, built utilizing
    ```
 
 4. **Run the Application**
-   ```bash
-   python server.py
-   ```
+
+   * **On Windows (Local):**
+     ```bash
+     python server.py
+     # OR if python isn't on PATH:
+     py server.py
+     ```
+
+   * **On Linux / macOS (Local):**
+     ```bash
+     python3 server.py
+     # OR:
+     python server.py
+     ```
+
+   * **On Cloud Deployments (Render, Heroku, Railway):**
+     Since cloud providers run on Linux servers, you must set the Start Command exactly to:
+     ```bash
+     python server.py
+     ```
+     *(Note: Do not use `py server.py` on Render, as the `py` launcher is Windows-only and will cause the backend agents to crash.)*
    
 5. **Access the Dashboard**
    Open your browser and navigate to `http://localhost:8000` (or the port specified in your terminal) to view the OmniSight dashboard.
