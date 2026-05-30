@@ -5,6 +5,9 @@
 
 OmniSight is an enterprise-grade corporate intelligence dashboard built for executives, venture capitalists, and strategy teams. Stop manually Googling your competitors or listening to hours of earnings calls. Simply enter a competitor's name, attach an audio file, and let OmniSight deploy autonomous AI agents to build a real-time, deep-dive intelligence battlecard. 
 
+> [!NOTE] 
+> **Performance Notice for Judges:** The live cloud demo is hosted on Render's Free Tier (0.1 CPU, 512MB RAM), which heavily bottlenecks our asynchronous agent pipeline, leading to scans taking up to 5 minutes. For lightning-fast execution speeds (under 30 seconds), please clone the repository and run the application locally!
+
 ## ✨ Features
 
 - **⚡ Live Competitive Scraping**: Instantly tracks "Hiring Velocity", "Pricing Changes", and "Sentiment/Outages".
