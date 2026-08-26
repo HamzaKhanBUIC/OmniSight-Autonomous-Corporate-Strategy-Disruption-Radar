@@ -1,88 +1,116 @@
-# 👁️ OmniSight
-> **Autonomous Corporate Strategy & Disruption Radar**
+# OmniSight: Autonomous Corporate Strategy & Disruption Radar
 
-![OmniSight Banner](https://via.placeholder.com/1200x400/0f172a/38bdf8?text=OmniSight+-+Autonomous+Competitive+Intelligence)
+> Multi-source competitive intelligence engine synthesizing live web telemetry, audio transcripts, and knowledge graphs into dynamic strategy dashboards.
 
-OmniSight is an enterprise-grade corporate intelligence dashboard built for executives, venture capitalists, and strategy teams. Stop manually Googling your competitors or listening to hours of earnings calls. Simply enter a competitor's name, attach an audio file, and let OmniSight deploy autonomous AI agents to build a real-time, deep-dive intelligence battlecard. 
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python)](https://python.org/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> [!NOTE] 
-> **Performance & Audio Notice for Judges:** The live cloud demo is hosted on Render's Free Tier (0.1 CPU, 512MB RAM limit). This severely bottlenecks our asynchronous agent pipeline, leading to basic scans taking several minutes. **Furthermore, executing the Speechmatics Audio Pipeline on the live demo will cause a server crash (Out of Memory - OOM)** because processing audio streams and loading local vector embeddings requires ~1GB of RAM, exceeding Render's 512MB limit. **For optimal, lightning-fast execution and full audio intelligence capabilities, please clone the repository and run the application locally!**
+---
 
-## ✨ Features
+## Overview
 
-- **⚡ Live Competitive Scraping**: Instantly tracks "Hiring Velocity", "Pricing Changes", and "Sentiment/Outages".
-- **🎙️ Audio Intelligence**: Ingests offline audio or YouTube links for highly accurate speaker diarization and strategic keyword extraction.
-- **🧠 Agent Graph Memory**: Every scan is saved to a knowledge graph, giving the AI persistent historical context for future benchmarking.
-- **📊 Executive Dashboard**: Beautiful, glassmorphism UI featuring dual-layered radar charts and chat-bubble transcripts for rapid insights.
-- **🚀 Concurrent Agent Architecture**: Parallel asynchronous execution ensures deep-dive intelligence is delivered in seconds, not hours.
+Market strategy and competitive analysis workflows often require manual synthesis across earnings call audio, pricing changes, hiring velocity, and web telemetry.
 
-## 🏗️ Architecture & Tech Stack
+**OmniSight** automates this analysis through a concurrent agent pipeline:
+1. **Live Web & Search Scraping**: Extracts recent pricing pivots, hiring trends, and customer sentiment signals via SERP APIs and headless web scrapers.
+2. **Audio Intelligence**: Transcribes executive earnings calls or product presentations with speaker diarization.
+3. **Graph Memory Synthesis**: Persists entity relations and historical market shifts into a local vector/knowledge graph via Cognee.
+4. **Interactive Visualization**: Formats findings into dual-layered radar comparisons and structured intelligence battlecards.
 
-OmniSight represents the cutting edge of AI agent orchestration, built utilizing industry-leading tools:
+---
 
-### Core Infrastructure
-* **Backend**: Python (Asyncio for parallel agent orchestration)
-* **Frontend**: Vanilla JS, HTML, Tailwind CSS, Chart.js
-* **LLM Cognitive Engine**: Google Gemini / Groq (Llama 3) for synthesizing complex web data and transcripts into structured JSON.
+## Architecture Flow
 
-### Sponsor Technologies
-* **🌐 Bright Data (SERP API & Web Unlocker)**: Executes live, parallel searches to capture market shifts while utilizing the Web Unlocker to deep-scrape URLs and bypass CAPTCHAs.
-* **🗣️ Speechmatics (Batch Async API)**: Powers our audio ingestion pipeline, providing industry-leading speaker diarization and transcription from raw files or direct URLs.
-* **🕸️ Cognee**: Constructs our Agent Graph Memory, ensuring the platform retains historical context and relationships between competitors across multiple scans. *Note: Cognee runs entirely locally via SQLite/Vector index and uses your existing Gemini/Groq LLM key, requiring no separate proprietary SaaS API key to set up.*
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Analyst Dashboard
+    participant API as FastAPI Backend (Asyncio Engine)
+    participant Scraper as Bright Data SERP / Web Scraper
+    participant Audio as Speechmatics Diarization API
+    participant Graph as Cognee Graph Memory
+    participant LLM as Llama-3 / Gemini Reasoning
 
-## 🚀 How to Run Locally
+    Client->>API: Initiate Company Audit (Entity + Audio Source)
+    par Concurrent Ingestion
+        API->>Scraper: Query Search Indices & Scrape Landing Pages
+        API->>Audio: Submit Audio Stream for Batch Transcription
+    end
+    Scraper-->>API: Extracted Web Metrics (Pricing, Job Postings, Reviews)
+    Audio-->>API: Diarized Speaker Transcripts
+    API->>LLM: Synthesize Multimodal Context into Structured JSON
+    LLM-->>API: Normalized Competitive Vector (Scores & Risk Factors)
+    API->>Graph: Ingest Entities and Update Historical Market Graph
+    API-->>Client: Return Radar Dataset & Strategic Battlecard
+```
+
+---
+
+## Core Capabilities
+
+- **Concurrent Agent Ingestion**: Parallel asynchronous coroutines execute web scraping and batch audio processing concurrently to reduce pipeline latency.
+- **Multimodal Diarization**: Extracts strategic signals, executive quotes, and sentiment directly from multi-speaker audio recordings.
+- **Persistent Market Graphs**: Maintains cross-scan entity relationships in a local vector/knowledge graph.
+- **Dynamic Radar Analytics**: Produces standardized competitive vectors across hiring velocity, product innovation, pricing pressure, and customer sentiment.
+
+---
+
+## Repository Structure
+
+```
+.
+├── static/                   # Frontend assets, Tailwind CSS, Chart.js radar views
+├── templates/                # HTML dashboard layouts
+├── server.py                 # Core FastAPI server and asynchronous pipeline
+├── requirements.txt          # Python dependencies
+└── README.md
+```
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Python 3.9+
-- API Keys for Bright Data, Speechmatics, and Google Gemini / Groq.
+- Python 3.10 or higher
+- API credentials for Google Gemini (or Groq), Bright Data, and Speechmatics
 
-### Installation Steps
+### Local Setup
 
-1. **Clone the repository**
+1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/omnisight.git
-   cd omnisight
+   git clone https://github.com/HamzaKhanBUIC/OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar.git
+   cd OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar
    ```
 
-2. **Install dependencies**
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Environment Variables**
-   Create a `.env` file in the root directory and add your API keys:
+3. **Configure environment variables**:
+   Create a `.env` file in the root directory:
    ```env
-   BRIGHT_DATA_API_KEY=your_key_here
-   SPEECHMATICS_API_KEY=your_key_here
-   GEMINI_API_KEY=your_key_here
-   GROQ_API_KEY=your_key_here
+   BRIGHT_DATA_API_KEY=your_bright_data_key
+   SPEECHMATICS_API_KEY=your_speechmatics_key
+   GEMINI_API_KEY=your_gemini_key
+   GROQ_API_KEY=your_groq_key
    ```
 
-4. **Run the Application**
-
-   * **On Windows (Local):**
-     ```bash
-     python server.py
-     # OR if python isn't on PATH:
-     py server.py
-     ```
-
-   * **On Linux / macOS (Local):**
-     ```bash
-     python3 server.py
-     # OR:
-     python server.py
-     ```
-
-   * **On Cloud Deployments (Render, Heroku, Railway):**
-     Since cloud providers run on Linux servers, you must set the Start Command exactly to:
-     ```bash
-     python server.py
-     ```
-     *(Note: Do not use `py server.py` on Render, as the `py` launcher is Windows-only and will cause the backend agents to crash.)*
-   
-5. **Access the Dashboard**
-   Open your browser and navigate to `http://localhost:8000` (or the port specified in your terminal) to view the OmniSight dashboard.
+4. **Launch the backend server**:
+   ```bash
+   python server.py
+   ```
+   Open `http://localhost:8000` in your browser.
 
 ---
-*Built with ❤️ for the GTM Intelligence & Market Intelligence Track.*
+
+## Deployment Guidelines
+
+When running on Linux-based container runtimes (such as Google Cloud Run or AWS ECS), ensure the container entrypoint invokes `python server.py` directly and allocate at least 1 GB of memory for local vector indexing during audio processing.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
