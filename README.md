@@ -1,116 +1,99 @@
-# OmniSight: Autonomous Corporate Strategy & Disruption Radar
+# OmniSight
 
-> Multi-source competitive intelligence engine synthesizing live web telemetry, audio transcripts, and knowledge graphs into dynamic strategy dashboards.
+> A competitor-research dashboard: enter a company name (and optionally an audio clip) and it combines Bright Data search results, a Speechmatics transcript and an LLM summary into one battlecard, to replace hours of manual competitor research.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python)](https://python.org/)
-[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
----
-
-## Overview
-
-Market strategy and competitive analysis workflows often require manual synthesis across earnings call audio, pricing changes, hiring velocity, and web telemetry.
-
-**OmniSight** automates this analysis through a concurrent agent pipeline:
-1. **Live Web & Search Scraping**: Extracts recent pricing pivots, hiring trends, and customer sentiment signals via SERP APIs and headless web scrapers.
-2. **Audio Intelligence**: Transcribes executive earnings calls or product presentations with speaker diarization.
-3. **Graph Memory Synthesis**: Persists entity relations and historical market shifts into a local vector/knowledge graph via Cognee.
-4. **Interactive Visualization**: Formats findings into dual-layered radar comparisons and structured intelligence battlecards.
+**Status:** Hackathon prototype — lablab.ai "Web Data UNLOCKED" hackathon (2,310 participants) · 2nd place, Speechmatics track. A scan cannot complete on `main` as it stands (see [Limitations](#limitations--roadmap)).
+**Demo:** [▶ Demo video](https://youtu.be/03Q0IVpRBAA)
 
 ---
 
-## Architecture Flow
+## Architecture & Workflow
+
+The server is a Python standard-library `http.server` (not FastAPI). Each scan starts `agent_runtime.py` as a subprocess; the page polls for its output.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Client as Analyst Dashboard
-    participant API as FastAPI Backend (Asyncio Engine)
-    participant Scraper as Bright Data SERP / Web Scraper
-    participant Audio as Speechmatics Diarization API
-    participant Graph as Cognee Graph Memory
-    participant LLM as Llama-3 / Gemini Reasoning
+    participant UI as web/index.html
+    participant S as server.py (http.server)
+    participant A as agent_runtime.py (subprocess)
+    participant BD as Bright Data (SERP + Web Unlocker)
+    participant SM as Speechmatics (batch)
+    participant LLM as Groq Llama 3.3 70B / Gemini 2.5 Flash Lite
+    participant C as Cognee
 
-    Client->>API: Initiate Company Audit (Entity + Audio Source)
-    par Concurrent Ingestion
-        API->>Scraper: Query Search Indices & Scrape Landing Pages
-        API->>Audio: Submit Audio Stream for Batch Transcription
-    end
-    Scraper-->>API: Extracted Web Metrics (Pricing, Job Postings, Reviews)
-    Audio-->>API: Diarized Speaker Transcripts
-    API->>LLM: Synthesize Multimodal Context into Structured JSON
-    LLM-->>API: Normalized Competitive Vector (Scores & Risk Factors)
-    API->>Graph: Ingest Entities and Update Historical Market Graph
-    API-->>Client: Return Radar Dataset & Strategic Battlecard
+    UI->>S: POST /api/run {target, optional audio}
+    S->>A: start subprocess
+    A->>BD: 3 SERP queries run concurrently
+    A->>BD: Web Unlocker scrape
+    A->>SM: audio transcription, after scraping (optional)
+    A->>LLM: build JSON battlecard
+    A->>C: store entities
+    A-->>S: web/data/latest_battlecard.json, status.txt
+    UI->>S: poll data files, render radar + battlecard
 ```
 
----
+## Key Features
 
-## Core Capabilities
+- **Search signals:** pricing, hiring and sentiment queries through Bright Data's SERP API, plus one Web Unlocker scrape (`agent_runtime.py`).
+- **Audio transcript:** Speechmatics batch transcription with speaker diarization, in live mode only. YouTube links are downloaded with `yt-dlp`.
+- **LLM battlecard:** Groq (Llama 3.3 70B) first, Gemini 2.5 Flash Lite as fallback, both through the OpenAI SDK, returning JSON.
+- **Graph memory:** entities are stored with Cognee (local).
+- **Dashboard:** vanilla JS, Tailwind (CDN) and Chart.js; the radar axes are Pricing, Performance, Features, Mobile and Support.
 
-- **Concurrent Agent Ingestion**: Parallel asynchronous coroutines execute web scraping and batch audio processing concurrently to reduce pipeline latency.
-- **Multimodal Diarization**: Extracts strategic signals, executive quotes, and sentiment directly from multi-speaker audio recordings.
-- **Persistent Market Graphs**: Maintains cross-scan entity relationships in a local vector/knowledge graph.
-- **Dynamic Radar Analytics**: Produces standardized competitive vectors across hiring velocity, product innovation, pricing pressure, and customer sentiment.
-
----
-
-## Repository Structure
-
-```
-.
-├── static/                   # Frontend assets, Tailwind CSS, Chart.js radar views
-├── templates/                # HTML dashboard layouts
-├── server.py                 # Core FastAPI server and asynchronous pipeline
-├── requirements.txt          # Python dependencies
-└── README.md
-```
-
----
-
-## Getting Started
+## Quickstart & Installation
 
 ### Prerequisites
-- Python 3.10 or higher
-- API credentials for Google Gemini (or Groq), Bright Data, and Speechmatics
+- Python 3.12 (the version pinned in `render.yaml`)
+- API keys: Groq or Gemini; Bright Data; Speechmatics (audio only)
 
-### Local Setup
+### Setup
+```bash
+git clone https://github.com/HamzaKhanBUIC/OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar.git
+cd OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar
+pip install -r requirements.txt
+```
+Create a `.env` in the repo root (see Configuration), then:
+```bash
+python server.py
+```
+Open http://localhost:8000.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/HamzaKhanBUIC/OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar.git
-   cd OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar
-   ```
+Note: `pip install` was not completed in the audit environment (disk full while fetching a `cognee` dependency), and all requirements are unpinned.
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Configuration & Environment
 
-3. **Configure environment variables**:
-   Create a `.env` file in the root directory:
-   ```env
-   BRIGHT_DATA_API_KEY=your_bright_data_key
-   SPEECHMATICS_API_KEY=your_speechmatics_key
-   GEMINI_API_KEY=your_gemini_key
-   GROQ_API_KEY=your_groq_key
-   ```
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `GROK_API_KEY` | none | Groq API key. The name is spelled `GROK` in the code. |
+| `GEMINI_API_KEY` | none | Gemini key; fallback LLM and Cognee embeddings |
+| `BRIGHT_DATA_API_KEY` | none | Bright Data. If missing, the agent runs in simulation mode |
+| `BRIGHT_DATA_SERP_ZONE` | `serp_api1` | Bright Data SERP zone |
+| `BRIGHT_DATA_UNLOCKER_ZONE` | `web_unlocker1` | Bright Data Web Unlocker zone |
+| `SPEECHMATICS_API_KEY` | none | Audio transcription; skipped if unset |
+| `PORT` | `8000` | HTTP port |
 
-4. **Launch the backend server**:
-   ```bash
-   python server.py
-   ```
-   Open `http://localhost:8000` in your browser.
+## Testing & Verification
 
----
+There are no automated tests on `main`. `scratch/test_cognee.py` and `scratch/test_gemini.py` are manual scripts that need real keys.
 
-## Deployment Guidelines
+## Architectural Decisions & Trade-offs
 
-When running on Linux-based container runtimes (such as Google Cloud Run or AWS ECS), ensure the container entrypoint invokes `python server.py` directly and allocate at least 1 GB of memory for local vector indexing during audio processing.
+- **Standard-library server plus subprocess:** no web framework to install; one scan at a time, with no job isolation (all scans share the same output files).
+- **Groq first, Gemini fallback:** a second provider is used when the Groq call fails or is not configured.
+- **Static frontend:** one HTML file, no build step.
 
----
+## Limitations & Roadmap
+
+- **Scans fail on `main`.** `system_instructions.txt` was deleted in commit `11c27af`, and the agent exits with "system_instructions.txt not found". The file is restored in [open PR #1](https://github.com/HamzaKhanBUIC/OmniSight-Autonomous-Corporate-Strategy-Disruption-Radar/pull/1); merge that first.
+- **Simulation mode invents data.** With no Bright Data key, the agent tells the LLM to generate plausible indicators from its own knowledge instead of using web results (`agent_runtime.py`, "SIMULATION MODE ACTIVE").
+- **Only the three SERP queries run concurrently.** Scraping runs first and audio transcription afterwards.
+- **No authentication or rate limit** on `/api/run`, and one shared job slot. The server's web root also serves runtime files and directory listings.
+- **Security fixes pending:** SSRF on the audio URL, upload path traversal, stored XSS, and disabled TLS verification are addressed in PR #1, not on `main`. Do not host this publicly until it is merged.
+- **The tracked repo includes** downloaded YouTube audio under `web/temp_audio/` and a run log in `web/data/`.
+- **Memory:** the author's submission notes say audio processing plus local embeddings needs about 1 GB of RAM and crashed on Render's 512 MB free tier ([`lablab_submission.md`](lablab_submission.md)).
+- **Not verified:** a full live scan with real keys, and the Speechmatics and Cognee steps at runtime.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).
