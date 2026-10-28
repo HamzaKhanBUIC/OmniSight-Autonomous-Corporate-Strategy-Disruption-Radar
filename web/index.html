@@ -313,6 +313,17 @@
         let selectedAudioBase64 = null;
         let selectedAudioUrl = null;
 
+        // Scan results, LLM output, scraped text and the vault are untrusted:
+        // escape them before they go into any HTML string.
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function toggleAudioMenu() {
             const menu = document.getElementById('audio-menu');
             if (menu.classList.contains('hidden')) {
@@ -369,7 +380,8 @@
 
         function addTerminalLine(text) {
             const term = document.getElementById('terminal-feed');
-            term.innerHTML += `<br>> ${text}`;
+            term.appendChild(document.createElement('br'));
+            term.appendChild(document.createTextNode(`> ${text}`));
             term.scrollTop = term.scrollHeight;
         }
 
@@ -523,9 +535,9 @@
                     <div class="flex justify-between items-center bg-slate-900/50 border border-slate-700/50 p-3.5 rounded-xl interactive-row cursor-pointer">
                         <div class="flex items-center space-x-3">
                             <span class="h-2.5 w-2.5 rounded-full ${bgClass} shadow-[0_0_8px_currentColor]"></span>
-                            <span class="text-sm text-slate-200 font-medium">${anom.title}</span>
+                            <span class="text-sm text-slate-200 font-medium">${escapeHtml(anom.title)}</span>
                         </div>
-                        <span class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">${anom.type}</span>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">${escapeHtml(anom.type)}</span>
                     </div>
                 `;
             });
@@ -539,7 +551,7 @@
                 
                 parityList.innerHTML += `
                     <tr class="interactive-row cursor-pointer">
-                        <td class="py-3 px-4 font-medium text-slate-300">${item.capability}</td>
+                        <td class="py-3 px-4 font-medium text-slate-300">${escapeHtml(item.capability)}</td>
                         <td class="py-3 px-4 text-center text-lg">${usIcon}</td>
                         <td class="py-3 px-4 text-center text-lg">${themIcon}</td>
                     </tr>
@@ -548,7 +560,7 @@
 
             // Detailed Analysis
             if(data.detailed_analysis) {
-                let html = data.detailed_analysis
+                let html = escapeHtml(data.detailed_analysis)
                     .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold text-white mt-4 mb-2">$1</h3>')
                     .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-white mt-5 mb-3">$1</h2>')
                     .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
@@ -563,7 +575,7 @@
                 const kwContainer = document.getElementById('audio-keywords');
                 kwContainer.innerHTML = '';
                 data.audio_analysis.key_phrases.forEach(kw => {
-                    kwContainer.innerHTML += `<span class="bg-violet-900/40 text-violet-300 border border-violet-700/50 px-3 py-1 rounded-full text-xs font-medium shadow-[0_0_10px_rgba(139,92,246,0.2)]">${kw}</span>`;
+                    kwContainer.innerHTML += `<span class="bg-violet-900/40 text-violet-300 border border-violet-700/50 px-3 py-1 rounded-full text-xs font-medium shadow-[0_0_10px_rgba(139,92,246,0.2)]">${escapeHtml(kw)}</span>`;
                 });
 
                 const trContainer = document.getElementById('audio-transcript');
@@ -572,9 +584,9 @@
                     const isEven = idx % 2 === 0;
                     trContainer.innerHTML += `
                         <div class="flex flex-col ${isEven ? 'items-start' : 'items-end'} mb-4 w-full">
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">${turn.speaker}</span>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">${escapeHtml(turn.speaker)}</span>
                             <div class="max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg ${isEven ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700' : 'bg-[#1e1b4b]/60 border border-violet-800/50 text-violet-100 rounded-tr-none'}">
-                                ${turn.text}
+                                ${escapeHtml(turn.text)}
                             </div>
                         </div>
                     `;
@@ -670,8 +682,8 @@
             const header = tableEl.querySelector('thead tr');
             header.innerHTML = `
                 <th class="py-3 px-4 font-medium">Capability</th>
-                <th class="py-3 px-4 text-center font-medium">${name1}</th>
-                <th class="py-3 px-4 text-center font-medium">${name2}</th>
+                <th class="py-3 px-4 text-center font-medium">${escapeHtml(name1)}</th>
+                <th class="py-3 px-4 text-center font-medium">${escapeHtml(name2)}</th>
             `;
 
             const parityList = document.getElementById('parity-list');
@@ -693,7 +705,7 @@
                 
                 parityList.innerHTML += `
                     <tr class="interactive-row cursor-pointer">
-                        <td class="py-3 px-4 font-medium text-slate-300">${item.capability}</td>
+                        <td class="py-3 px-4 font-medium text-slate-300">${escapeHtml(item.capability)}</td>
                         <td class="py-3 px-4 text-center text-lg">${icon1}</td>
                         <td class="py-3 px-4 text-center text-lg">${icon2}</td>
                     </tr>
@@ -776,9 +788,9 @@
                     try {
                         const data = JSON.parse(localStorage.getItem(key));
                         html += `
-                            <a href="#" onclick="loadFromVault('${key}')" class="flex items-center space-x-3 px-4 py-2 text-slate-400 hover:bg-slate-900/50 rounded-xl transition hover:text-cyan-400 interactive-row border border-transparent hover:border-slate-800">
+                            <a href="#" data-vault-key="${escapeHtml(key)}" onclick="loadFromVault(this.dataset.vaultKey)" class="flex items-center space-x-3 px-4 py-2 text-slate-400 hover:bg-slate-900/50 rounded-xl transition hover:text-cyan-400 interactive-row border border-transparent hover:border-slate-800">
                                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_currentColor]"></span>
-                                <span class="text-sm truncate font-medium">${data.target_company}</span>
+                                <span class="text-sm truncate font-medium">${escapeHtml(data.target_company)}</span>
                             </a>
                         `;
                     } catch(e) {}
