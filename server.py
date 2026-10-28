@@ -1,9 +1,9 @@
 import json
 import subprocess
 import os
+import sys
 import threading
 import base64
-import time
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -11,6 +11,9 @@ import security_utils
 
 PORT = int(os.environ.get("PORT", 8000))
 WEB_DIR = "web"
+MAX_TARGET_LENGTH = 200
+# Base64 adds about a third on top of the raw audio size
+MAX_BODY_BYTES = security_utils.MAX_AUDIO_BYTES * 4 // 3 + 64 * 1024
 
 # Ensure web directory exists
 os.makedirs(WEB_DIR, exist_ok=True)
@@ -23,13 +26,20 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed_path = urlparse(self.path)
         if parsed_path.path == '/api/run':
-            content_length = int(self.headers['Content-Length'])
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+            except ValueError:
+                self.send_error(400, "Invalid Content-Length.")
+                return
+            if content_length > MAX_BODY_BYTES:
+                self.send_error(413, "Request body too large.")
+                return
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
                 target = data.get('target')
-                if not target:
-                    self.send_error(400, "Missing 'target' in request body.")
+                if not target or not isinstance(target, str) or len(target) > MAX_TARGET_LENGTH:
+                    self.send_error(400, "Missing or invalid 'target' in request body.")
                     return
                 
                 audio_base64 = data.get('audio')
@@ -45,11 +55,13 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
                         return
                 
                 if audio_base64 and filename:
-                    os.makedirs(os.path.join(WEB_DIR, "temp_audio"), exist_ok=True)
+                    os.makedirs(security_utils.AUDIO_DIR, exist_ok=True)
                     if "," in audio_base64:
                         audio_base64 = audio_base64.split(",")[1]
                     
-                    temp_audio_path = os.path.join(WEB_DIR, "temp_audio", f"{int(time.time())}_{filename}")
+                    # Never trust the client's file name: build our own and keep it inside AUDIO_DIR
+                    temp_audio_path = security_utils.confined_path(
+                        security_utils.AUDIO_DIR, security_utils.safe_upload_name(filename))
                     try:
                         with open(temp_audio_path, "wb") as af:
                             af.write(base64.b64decode(audio_base64))
@@ -74,11 +86,13 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
 
                 def run_agent():
                     print(f"[*] Server starting radar scan for: {target}")
-                    cmd = ["python", "agent_runtime.py", target]
+                    cmd = [sys.executable, "agent_runtime.py"]
                     if temp_audio_path:
                         cmd.extend(["--audio", temp_audio_path])
                     if audio_url:
                         cmd.extend(["--audio-url", audio_url])
+                    # "--" stops a target such as "--audio=/etc/passwd" from being read as an option
+                    cmd.extend(["--", target])
                     
                     # Run and stream output
                     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
