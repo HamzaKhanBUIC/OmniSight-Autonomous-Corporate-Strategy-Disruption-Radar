@@ -79,7 +79,7 @@ There are no automated tests on `main`. `scratch/test_cognee.py` and `scratch/te
 ## Architectural Decisions & Trade-offs
 
 - **Standard-library server plus subprocess:** no web framework to install; one scan at a time, with no job isolation (all scans share the same output files).
-- **Groq first, Gemini fallback:** a fast free-tier primary with a second provider when Groq fails.
+- **Groq first, Gemini fallback:** a second provider is used when the Groq call fails or is not configured.
 - **Static frontend:** one HTML file, no build step.
 
 ## Limitations & Roadmap
@@ -95,4 +95,4 @@ There are no automated tests on `main`. `scratch/test_cognee.py` and `scratch/te
 
 ## License
 
-No license file is present in this repository; a license has not been chosen.
+MIT. See [LICENSE](LICENSE).
