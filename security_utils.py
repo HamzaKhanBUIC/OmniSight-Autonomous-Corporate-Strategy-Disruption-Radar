@@ -12,12 +12,12 @@ import time
 from urllib.parse import urljoin, urlsplit
 
 # Uploaded and downloaded audio lives outside the public web root.
-AUDIO_DIR = os.environ.get("AUDIO_DIR", "temp_audio")
+AUDIO_DIR = os.environ.get("AUDIO_DIR") or "temp_audio"
 
 
 def _int_env(name, default):
     try:
-        return int(os.environ.get(name, default))
+        return int(os.environ.get(name) or default)
     except ValueError:
         return default
 

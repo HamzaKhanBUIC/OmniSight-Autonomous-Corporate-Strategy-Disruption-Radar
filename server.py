@@ -9,7 +9,9 @@ from urllib.parse import urlparse, parse_qs
 
 import security_utils
 
-PORT = int(os.environ.get("PORT", 8000))
+# Local only by default; set HOST=0.0.0.0 to accept outside connections (e.g. on Render)
+HOST = os.environ.get("HOST") or "127.0.0.1"
+PORT = int(os.environ.get("PORT") or 8000)
 WEB_DIR = "web"
 MAX_TARGET_LENGTH = 200
 # Base64 adds about a third on top of the raw audio size
@@ -116,8 +118,8 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
             self.send_error(404, "Endpoint not found.")
 
 if __name__ == "__main__":
-    server_address = ('', PORT)
+    server_address = (HOST, PORT)
     httpd = HTTPServer(server_address, OmniSightHandler)
-    print(f"[+] OmniSight Local Server running at http://localhost:{PORT}")
+    print(f"[+] OmniSight Local Server running at http://{HOST}:{PORT}")
     print("[+] Press Ctrl+C to stop.")
     httpd.serve_forever()

@@ -17,7 +17,8 @@ import security_utils
 load_dotenv()
 
 # Configure Cognee to use Groq (if available) or Gemini Direct natively via LiteLLM
-grok_key = os.environ.get("GROK_API_KEY")
+# GROQ_API_KEY is the documented name; GROK_API_KEY is still read for older .env files
+grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
 gemini_key = os.environ.get("GEMINI_API_KEY")
 
 if grok_key and grok_key != "your_grok_api_key_here":
@@ -62,7 +63,7 @@ def initialize_omnisight():
         is_simulation = True
 
     # Initialize Groq Client (Primary Engine)
-    grok_key = os.environ.get("GROK_API_KEY")
+    grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
     grok_client = None
     if grok_key and grok_key != "your_grok_api_key_here":
         print("[+] Initializing Groq Primary Client...")
@@ -72,7 +73,7 @@ def initialize_omnisight():
             http_client=httpx.Client()
         )
     else:
-        print("[-] WARNING: GROK_API_KEY missing or placeholder.")
+        print("[-] WARNING: GROQ_API_KEY missing or placeholder.")
 
     # Initialize Gemini Direct Client (Fallback/Backup)
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -137,7 +138,7 @@ async def fetch_bright_data_serp(query: str, api_key: str):
         "Content-Type": "application/json"
     }
     payload = {
-        "zone": os.environ.get("BRIGHT_DATA_SERP_ZONE", "serp_api1"),
+        "zone": os.environ.get("BRIGHT_DATA_SERP_ZONE") or "serp_api1",
         "url": search_url,
         "format": "raw"
     }
@@ -189,7 +190,7 @@ async def fetch_bright_data_unlocker(target_url: str, api_key: str) -> str:
         "Content-Type": "application/json"
     }
     payload = {
-        "zone": os.environ.get("BRIGHT_DATA_UNLOCKER_ZONE", "web_unlocker1"),
+        "zone": os.environ.get("BRIGHT_DATA_UNLOCKER_ZONE") or "web_unlocker1",
         "url": target_url,
         "format": "raw"
     }
@@ -372,7 +373,7 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
             active_model = "gemini-2.5-flash-lite"
         
         if not active_client:
-            print("[-] ERROR: No active AI client configured. Set GROK_API_KEY or GEMINI_API_KEY in your .env file.")
+            print("[-] ERROR: No active AI client configured. Set GROQ_API_KEY or GEMINI_API_KEY in your .env file.")
             break
         
         try:

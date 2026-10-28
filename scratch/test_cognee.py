@@ -9,7 +9,7 @@ load_dotenv()
 os.environ["COGNEE_SKIP_CONNECTION_TEST"] = "true"
 
 # Set all potential keys for Cognee
-grok_key = os.environ.get("GROK_API_KEY")
+grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
 gemini_key = os.environ.get("GEMINI_API_KEY")
 
 if grok_key and grok_key != "your_grok_api_key_here":
