@@ -3,6 +3,7 @@
 > A competitor-research dashboard: enter a company name (and optionally an audio clip) and it combines Bright Data search results, a Speechmatics transcript and an LLM summary into one battlecard, to replace hours of manual competitor research.
 
 **Status:** Hackathon prototype — lablab.ai "Web Data UNLOCKED" hackathon (2,310 participants) · 2nd place, Speechmatics track. A scan cannot complete on `main` as it stands (see [Limitations](#limitations--roadmap)).
+**Demo:** [▶ Demo video](https://youtu.be/03Q0IVpRBAA)
 
 ---
 
