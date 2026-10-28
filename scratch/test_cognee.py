@@ -1,21 +1,15 @@
 import os
-import ssl
 import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
-# Globally bypass SSL verification for all python libraries (resolves local CA errors)
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Bypass litellm SSL verification via python attribute directly
-import litellm
-litellm.ssl_verify = False
+# TLS is verified; set SSL_CERT_FILE if your network needs a custom CA bundle.
 
 # Bypass Cognee connection test
 os.environ["COGNEE_SKIP_CONNECTION_TEST"] = "true"
 
 # Set all potential keys for Cognee
-grok_key = os.environ.get("GROK_API_KEY")
+grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
 gemini_key = os.environ.get("GEMINI_API_KEY")
 
 if grok_key and grok_key != "your_grok_api_key_here":

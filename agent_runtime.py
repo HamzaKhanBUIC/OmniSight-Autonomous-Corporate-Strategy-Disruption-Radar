@@ -4,17 +4,21 @@ import re
 import json
 import asyncio
 import httpx
-import ssl
 from dotenv import load_dotenv
 
-# Globally bypass SSL verification for all python libraries (resolves local CA errors)
-ssl._create_default_https_context = ssl._create_unverified_context
+import security_utils
+
+# TLS certificates are always verified. If your network intercepts TLS (corporate
+# proxy, antivirus), set SSL_CERT_FILE to a CA bundle that includes its root CA
+# instead of turning verification off. httpx (OpenAI SDK, Bright Data calls)
+# reads it directly; yt-dlp is pointed at it below.
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configure Cognee to use Groq (if available) or Gemini Direct natively via LiteLLM
-grok_key = os.environ.get("GROK_API_KEY")
+# GROQ_API_KEY is the documented name; GROK_API_KEY is still read for older .env files
+grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
 gemini_key = os.environ.get("GEMINI_API_KEY")
 
 if grok_key and grok_key != "your_grok_api_key_here":
@@ -34,14 +38,7 @@ if gemini_key:
     os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
     os.environ["EMBEDDING_API_KEY"] = gemini_key
 
-os.environ["LITELLM_SSL_VERIFY"] = "False"
 os.environ["COGNEE_SKIP_CONNECTION_TEST"] = "true"
-
-try:
-    import litellm
-    litellm.ssl_verify = False
-except ImportError:
-    pass
 
 # Attempt to load openai and cognee
 try:
@@ -66,17 +63,17 @@ def initialize_omnisight():
         is_simulation = True
 
     # Initialize Groq Client (Primary Engine)
-    grok_key = os.environ.get("GROK_API_KEY")
+    grok_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROK_API_KEY")
     grok_client = None
     if grok_key and grok_key != "your_grok_api_key_here":
         print("[+] Initializing Groq Primary Client...")
         grok_client = openai.OpenAI(
             api_key=grok_key,
             base_url="https://api.groq.com/openai/v1",
-            http_client=httpx.Client(verify=False)
+            http_client=httpx.Client()
         )
     else:
-        print("[-] WARNING: GROK_API_KEY missing or placeholder.")
+        print("[-] WARNING: GROQ_API_KEY missing or placeholder.")
 
     # Initialize Gemini Direct Client (Fallback/Backup)
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -86,7 +83,7 @@ def initialize_omnisight():
         gemini_client = openai.OpenAI(
             api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            http_client=httpx.Client(verify=False)
+            http_client=httpx.Client()
         )
     else:
         print("[-] WARNING: GEMINI_API_KEY missing or placeholder.")
@@ -141,13 +138,13 @@ async def fetch_bright_data_serp(query: str, api_key: str):
         "Content-Type": "application/json"
     }
     payload = {
-        "zone": os.environ.get("BRIGHT_DATA_SERP_ZONE", "serp_api1"),
+        "zone": os.environ.get("BRIGHT_DATA_SERP_ZONE") or "serp_api1",
         "url": search_url,
         "format": "raw"
     }
     try:
         print(f"[+] Bright Data: Fetching SERP data for query '{query}'...")
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=30.0)
             if response.status_code == 200:
                 html = response.text
@@ -193,13 +190,13 @@ async def fetch_bright_data_unlocker(target_url: str, api_key: str) -> str:
         "Content-Type": "application/json"
     }
     payload = {
-        "zone": os.environ.get("BRIGHT_DATA_UNLOCKER_ZONE", "web_unlocker1"),
+        "zone": os.environ.get("BRIGHT_DATA_UNLOCKER_ZONE") or "web_unlocker1",
         "url": target_url,
         "format": "raw"
     }
     try:
         print(f"[+] Bright Data: Scraping site via Web Unlocker: {target_url}...")
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=25.0)
             if response.status_code == 200:
                 html_content = response.text
@@ -304,18 +301,24 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
             import time
             try:
                 print(f"[+] Processing audio URL: {audio_url}")
-                os.makedirs(os.path.join("web", "temp_audio"), exist_ok=True)
-                download_path = os.path.join("web", "temp_audio", f"{int(time.time())}_url_audio.media")
+                os.makedirs(security_utils.AUDIO_DIR, exist_ok=True)
+                download_path = os.path.join(security_utils.AUDIO_DIR, f"{int(time.time())}_url_audio.media")
                 
-                if "youtube.com" in audio_url or "youtu.be" in audio_url:
+                if security_utils.is_youtube_url(audio_url):
                     print("[+] YouTube URL detected. Extracting audio stream using yt-dlp...")
                     try:
                         import yt_dlp
                         ydl_opts_simple = {
                             'format': 'bestaudio/best',
-                            'outtmpl': os.path.join("web", "temp_audio", f"{int(time.time())}_yt_audio.%(ext)s"),
-                            'nocheckcertificate': True,
+                            'outtmpl': os.path.join(security_utils.AUDIO_DIR, f"{int(time.time())}_yt_audio.%(ext)s"),
+                            # Only the YouTube extractor may run, never the generic one
+                            'allowed_extractors': ['youtube'],
+                            'noplaylist': True,
+                            'max_filesize': security_utils.MAX_AUDIO_BYTES,
                         }
+                        if os.environ.get("SSL_CERT_FILE"):
+                            # Use SSL_CERT_FILE / the system store instead of certifi's bundle
+                            ydl_opts_simple['compat_opts'] = ['no-certifi']
                         with yt_dlp.YoutubeDL(ydl_opts_simple) as ydl:
                             info = ydl.extract_info(audio_url, download=True)
                             audio_path = ydl.prepare_filename(info)
@@ -325,11 +328,8 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
                 
                 if not audio_path:
                     print(f"[+] Downloading raw audio from direct link: {audio_url}...")
-                    with httpx.Client(verify=False, follow_redirects=True) as hclient:
-                        with open(download_path, "wb") as f:
-                            with hclient.stream("GET", audio_url) as r:
-                                for chunk in r.iter_bytes():
-                                    f.write(chunk)
+                    # https only, public addresses only, every redirect re-checked
+                    security_utils.download_public_https(audio_url, download_path)
                     audio_path = download_path
                     print(f"[+] Saved raw media stream to {audio_path}")
             except Exception as e:
@@ -373,7 +373,7 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
             active_model = "gemini-2.5-flash-lite"
         
         if not active_client:
-            print("[-] ERROR: No active AI client configured. Set GROK_API_KEY or GEMINI_API_KEY in your .env file.")
+            print("[-] ERROR: No active AI client configured. Set GROQ_API_KEY or GEMINI_API_KEY in your .env file.")
             break
         
         try:

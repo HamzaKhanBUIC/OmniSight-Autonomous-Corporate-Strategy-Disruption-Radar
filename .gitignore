@@ -5,6 +5,8 @@
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -44,3 +46,6 @@ ENV/lib/
 
 # Local logs
 *.log
+
+# Uploaded / downloaded audio (runtime data)
+temp_audio/
