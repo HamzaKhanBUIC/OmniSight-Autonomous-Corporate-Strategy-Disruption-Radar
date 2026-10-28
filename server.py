@@ -1,5 +1,5 @@
 import json
-import subprocess
+import subprocess  # nosec B404
 import os
 import sys
 import threading
@@ -97,7 +97,8 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
                     cmd.extend(["--", target])
                     
                     # Run and stream output
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+                    # Reviewed: argument list, no shell, target passed after "--"
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)  # nosec B603
                     
                     with open(status_path, "a") as f:
                         for line in process.stdout:
