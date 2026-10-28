@@ -7,6 +7,8 @@ import time
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
+import security_utils
+
 PORT = int(os.environ.get("PORT", 8000))
 WEB_DIR = "web"
 
@@ -34,6 +36,13 @@ class OmniSightHandler(SimpleHTTPRequestHandler):
                 filename = data.get('filename')
                 audio_url = data.get('audio_url')
                 temp_audio_path = None
+
+                if audio_url:
+                    try:
+                        security_utils.validate_public_https_url(audio_url)
+                    except security_utils.UnsafeURLError as e:
+                        self.send_error(400, f"audio_url rejected: {e}")
+                        return
                 
                 if audio_base64 and filename:
                     os.makedirs(os.path.join(WEB_DIR, "temp_audio"), exist_ok=True)

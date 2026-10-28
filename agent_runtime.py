@@ -7,6 +7,8 @@ import httpx
 import ssl
 from dotenv import load_dotenv
 
+import security_utils
+
 # Globally bypass SSL verification for all python libraries (resolves local CA errors)
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -304,17 +306,21 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
             import time
             try:
                 print(f"[+] Processing audio URL: {audio_url}")
-                os.makedirs(os.path.join("web", "temp_audio"), exist_ok=True)
-                download_path = os.path.join("web", "temp_audio", f"{int(time.time())}_url_audio.media")
+                os.makedirs(security_utils.AUDIO_DIR, exist_ok=True)
+                download_path = os.path.join(security_utils.AUDIO_DIR, f"{int(time.time())}_url_audio.media")
                 
-                if "youtube.com" in audio_url or "youtu.be" in audio_url:
+                if security_utils.is_youtube_url(audio_url):
                     print("[+] YouTube URL detected. Extracting audio stream using yt-dlp...")
                     try:
                         import yt_dlp
                         ydl_opts_simple = {
                             'format': 'bestaudio/best',
-                            'outtmpl': os.path.join("web", "temp_audio", f"{int(time.time())}_yt_audio.%(ext)s"),
+                            'outtmpl': os.path.join(security_utils.AUDIO_DIR, f"{int(time.time())}_yt_audio.%(ext)s"),
                             'nocheckcertificate': True,
+                            # Only the YouTube extractor may run, never the generic one
+                            'allowed_extractors': ['youtube'],
+                            'noplaylist': True,
+                            'max_filesize': security_utils.MAX_AUDIO_BYTES,
                         }
                         with yt_dlp.YoutubeDL(ydl_opts_simple) as ydl:
                             info = ydl.extract_info(audio_url, download=True)
@@ -325,11 +331,8 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
                 
                 if not audio_path:
                     print(f"[+] Downloading raw audio from direct link: {audio_url}...")
-                    with httpx.Client(verify=False, follow_redirects=True) as hclient:
-                        with open(download_path, "wb") as f:
-                            with hclient.stream("GET", audio_url) as r:
-                                for chunk in r.iter_bytes():
-                                    f.write(chunk)
+                    # https only, public addresses only, every redirect re-checked
+                    security_utils.download_public_https(audio_url, download_path)
                     audio_path = download_path
                     print(f"[+] Saved raw media stream to {audio_path}")
             except Exception as e:
