@@ -8,11 +8,11 @@ load_dotenv()
 key = os.environ.get("GEMINI_API_KEY")
 print(f"Key exists: {bool(key)}")
 
-# Disable SSL verification for development environments facing CA issues
+# TLS is verified; set SSL_CERT_FILE if your network needs a custom CA bundle.
 client = openai.OpenAI(
     api_key=key,
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    http_client=httpx.Client(verify=False)
+    http_client=httpx.Client()
 )
 
 try:

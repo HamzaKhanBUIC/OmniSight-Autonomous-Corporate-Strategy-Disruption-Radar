@@ -1,15 +1,9 @@
 import os
-import ssl
 import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
-# Globally bypass SSL verification for all python libraries (resolves local CA errors)
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Bypass litellm SSL verification via python attribute directly
-import litellm
-litellm.ssl_verify = False
+# TLS is verified; set SSL_CERT_FILE if your network needs a custom CA bundle.
 
 # Bypass Cognee connection test
 os.environ["COGNEE_SKIP_CONNECTION_TEST"] = "true"

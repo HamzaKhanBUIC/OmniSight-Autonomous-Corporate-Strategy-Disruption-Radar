@@ -4,13 +4,14 @@ import re
 import json
 import asyncio
 import httpx
-import ssl
 from dotenv import load_dotenv
 
 import security_utils
 
-# Globally bypass SSL verification for all python libraries (resolves local CA errors)
-ssl._create_default_https_context = ssl._create_unverified_context
+# TLS certificates are always verified. If your network intercepts TLS (corporate
+# proxy, antivirus), set SSL_CERT_FILE to a CA bundle that includes its root CA
+# instead of turning verification off. httpx (OpenAI SDK, Bright Data calls)
+# reads it directly; yt-dlp is pointed at it below.
 
 # Load environment variables from .env file
 load_dotenv()
@@ -36,14 +37,7 @@ if gemini_key:
     os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
     os.environ["EMBEDDING_API_KEY"] = gemini_key
 
-os.environ["LITELLM_SSL_VERIFY"] = "False"
 os.environ["COGNEE_SKIP_CONNECTION_TEST"] = "true"
-
-try:
-    import litellm
-    litellm.ssl_verify = False
-except ImportError:
-    pass
 
 # Attempt to load openai and cognee
 try:
@@ -75,7 +69,7 @@ def initialize_omnisight():
         grok_client = openai.OpenAI(
             api_key=grok_key,
             base_url="https://api.groq.com/openai/v1",
-            http_client=httpx.Client(verify=False)
+            http_client=httpx.Client()
         )
     else:
         print("[-] WARNING: GROK_API_KEY missing or placeholder.")
@@ -88,7 +82,7 @@ def initialize_omnisight():
         gemini_client = openai.OpenAI(
             api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            http_client=httpx.Client(verify=False)
+            http_client=httpx.Client()
         )
     else:
         print("[-] WARNING: GEMINI_API_KEY missing or placeholder.")
@@ -149,7 +143,7 @@ async def fetch_bright_data_serp(query: str, api_key: str):
     }
     try:
         print(f"[+] Bright Data: Fetching SERP data for query '{query}'...")
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=30.0)
             if response.status_code == 200:
                 html = response.text
@@ -201,7 +195,7 @@ async def fetch_bright_data_unlocker(target_url: str, api_key: str) -> str:
     }
     try:
         print(f"[+] Bright Data: Scraping site via Web Unlocker: {target_url}...")
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=25.0)
             if response.status_code == 200:
                 html_content = response.text
@@ -316,12 +310,14 @@ def run_analysis(target_company: str, audio_path: str = None, audio_url: str = N
                         ydl_opts_simple = {
                             'format': 'bestaudio/best',
                             'outtmpl': os.path.join(security_utils.AUDIO_DIR, f"{int(time.time())}_yt_audio.%(ext)s"),
-                            'nocheckcertificate': True,
                             # Only the YouTube extractor may run, never the generic one
                             'allowed_extractors': ['youtube'],
                             'noplaylist': True,
                             'max_filesize': security_utils.MAX_AUDIO_BYTES,
                         }
+                        if os.environ.get("SSL_CERT_FILE"):
+                            # Use SSL_CERT_FILE / the system store instead of certifi's bundle
+                            ydl_opts_simple['compat_opts'] = ['no-certifi']
                         with yt_dlp.YoutubeDL(ydl_opts_simple) as ydl:
                             info = ydl.extract_info(audio_url, download=True)
                             audio_path = ydl.prepare_filename(info)
