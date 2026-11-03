@@ -65,7 +65,7 @@ Note: `pip install` was not completed in the audit environment (disk full while 
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `GROK_API_KEY` | none | Groq API key. The name is spelled `GROK` in the code. |
+| `GROQ_API_KEY` | none | Groq API key. The older name `GROK_API_KEY` is still accepted. |
 | `GEMINI_API_KEY` | none | Gemini key; fallback LLM and Cognee embeddings |
 | `BRIGHT_DATA_API_KEY` | none | Bright Data. If missing, the agent runs in simulation mode |
 | `BRIGHT_DATA_SERP_ZONE` | `serp_api1` | Bright Data SERP zone |
